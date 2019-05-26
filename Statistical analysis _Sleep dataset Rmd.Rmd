@@ -1,0 +1,719 @@
+
+##1. INTRODUCTION
+
+The amount of sleep an individual needs to live a healthy lifestyle depends on many different factors. In CA PART I of assignment, the study was focused on finding influential factors for variable __Hrs of sleep needed not to feel sleepy(hourneed)__ and found that some factors like weight,age group,sleeping hours during weeknight and weekend are influential factors. Understanding these influences and dependancy makes it easier to find what affects an individual's sleep and determine hours of sleep needed for them not to feel sleepy. Hence the current study will continue the same analysis as in Part I and expand upon the examination recognizing some more new factors contributing towards the hours of sleep needed not to feel sleepy. Later at the end, successive multiple regression models with better significance are built to predict the outcome variable __Hrs of sleep needed not to feel sleepy(hourneed)__.
+
+###1.1 Research question
+In this research, an analysis has been carried out to find whether the Dependent variable: __Hrs of sleep needed not to feel sleepy(hourneed)__ can be predicted by Independent variables: __Hrs of sleep on average each week night(hourwnit)__, __Hrs of sleep on average each weekend night(hourwend)__, __Wakeup feeling refreshed weekdays(refreshd)__.
+
+##2. METHODOLOGY
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(pander)
+library(foreign)
+library(stats)
+library(dplyr)
+library(ggplot2)
+library(psych)
+library(pastecs)
+library(semTools)
+library(car)
+library(pander)
+library(readr)
+
+#Read in the dataset
+sleep <- read_csv('sleep5ED.csv', na="" )
+```
+
+<font size = '5'> 2.1 Interpretation of missing values,outliers and Normality. </font>
+
+**a. Missing values:** The given dataset included some missing values which were represented as a blank " " in the dataset. Initially, these missing values are recoded as "NA" and imported into the environment. To find all missing values in the data frame, following code was used:
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+allMissing <- is.na(sleep) 
+counts <- colSums(allMissing)
+counts[counts>0]
+```
+
+These NA values for each of the variables of interest are imputed for the further analysis in this study. With respect to numerical variables, the NA values are replaced by mean of the corresponding variables and for categorical variable, the NA values are replaced by most frequent value of the variable.
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+#Imputing NAs for variables of interest
+m_hrn <- round(mean(sleep$hourneed,na.rm = T),2)
+m_hrwe <- round(mean(sleep$hourwend,na.rm = T),2)
+m_hrwn <- round(mean(sleep$hourwnit,na.rm = T),2)
+table(sleep$refreshd)
+sleep$hourneed[is.na(sleep$hourneed)] <- m_hrn
+sleep$hourwend[is.na(sleep$hourwend)] <- m_hrwe
+sleep$hourwnit[is.na(sleep$hourwnit)] <- m_hrwn
+sleep$refreshd[is.na(sleep$refreshd)] <- 2
+```
+
+**b. Outliers:** Every variable of interest has been scaled and checked for outliers which fall in between the range +3.29 and -3.29(standardised score)
+
+**c. Normality:**
+
+The steps used to check for normality of a variable are mentioned below:
+
+1. Inspecting the histogram and QQ-plot.
+2. Inspecting standardised normal scores of skew and kurtosis based on the advice of George and Mallery(2011) which categorizes a distribution as normal if the relevant standardised scores for skewness and kurtosis fall in the range +/- 2.
+3. Inspecting Z-score and outliers based on the advice of Field, Miles and Field (2012) which categorizes a distribution as normal if 95% of the standardised scores for the variable fall within the bounds of +/-3.29 for a dataset larger than 80 cases.
+4. Conducting a normality test like kolmogorov smirnov which assumes null hypothesis as, the distribution of variable is normal.
+
+<font size ='5'> 2.2 Cut-off statistical significance level </font>
+
+An alpha level __0.05__ was adopted as the cut-off for statistical significance level. 
+
+<font size = '5'> 2.3 Convention for assessing effect size</font>
+
+For all statistical tests, Cohen's conventions on effect size were adopted. Cohen's provided a rule of thumb for interpreting effect sizes, which is as represented below.  
+1. '0.2' = small effect  
+2. '0.5' = medium effect  
+3. '0.8' = large effect  
+
+<font size = '5'> 2.4 Statistical evidences from previous study  </font>
+
+ In analysis of CA PART I, the following observations were done:
+ 
+ 1. It was found that correlation between weight of an individual and hours of sleep needed not to feel sleepy is statistically significant.
+ 2. It was found that hours of sleep during weeknight and weekend has statistically significant influence on hours of sleep needed not to feel sleepy.
+ 3. It was found that there is a statistically significant difference between the hours of sleep needed by each of the age groups recoded into 3 categories.
+ 
+ These statististical evidences drive us to carry out the current analysis to find variables which can predict the outcome variable _Hours of sleep needed not to feel sleepy_.
+ 
+<font size = '5'> 2.5 Multivariate technique used: </font>
+ 
+ In this study we are trying to predict a dependent variable (which is **continuous** in nature), from **multiple independent variables** and hence multiple linear regression technique is used to create the models which **assumes a linear relation** between the independent and dependent variables.
+ 
+<font size = '5'> 2.6 Assessing fit and usefulness of models: </font> 
+ 
+A regression model's fit is assessed by following observations:
+
+**1.R-squared and Adjusted R-squared**
+
+R-squared value is a useful parameter which ranges from '0' to '1', measuring the predictive power of a model and explains the proportion of variation found in dependent variable. Improvement in regression model results in proportional increase in R-squared.  
+But R-squared value can only increase as you put in more number of predictor variables into the model. To overcome this, a related statistic, Adjusted R-squared is used which incorporates the model's degrees of freedom. Adjusted R-squared will decrease as predictors are added if the increase in model fit does not make up for the loss of degrees of freedom. Similarly, it will increase as predictors are added, if the increase in model fit is worthwhile. Adjusted R-squared is always used for models with more than one predictor variable(current scenario). It is interpreted as proportion of total variance that is explained by the model.  
+Usually a R-squared value of '1' indicates perfect prediction rate of a model. But there are situations where a high R-squared value is not necessary. When there is more interest in the relationship between variables and not in prediction, the R-squared is less important. In this case, an R-squared in range of 0.10 to 0.15 is still reasonable.
+
+**2.F-Statistic**
+
+The statistical significance of F-statistic is the significance of a model. This particular parameter checks if the model as a whole predicts the dependent variable and can be useful when the research objective is either prediction or explanation. A significant F-test indicates that the observed R-squared value is not a spurious result of oddities in the dataset. Thus the F-statistic examines whether a proposed relationship between the response variable and a set of predictors is statistically reliable. 
+
+**3.Regression Co-efficients**
+
+The regression co-efficients or Beta values are the parameters which measures the strength and relationship between the independent variables and the dependent variables. The regression co-efficients determine the shape of the model that is fitted.It indicates the strength of relationship between a given predictor, i, and an outcome in the units of measurement of the predictor. It is the change in the outcome associated with a unit change in the predictor.
+ 
+**4.significant scores(p-value)**
+
+The p-values are very important because, we can consider a linear model to be statistically significant only when the p-value is less than the pre-determined statistically significance level.  
+In the model we will obtain two kinds of p-values, one for the whole model and another is the individual p-values for each of the predictor variables. Where there is a p-value, there is a null and alternative hypothesis associated with it. In linear regression, the Null hypothesis is that the co-efficients associated with the variables is equal to zero. the alternative hypothesis is that the co-efficients are not equal to zero(i.e. there exists a relationship between the independent variable in question and the dependent variable)
+
+The most common statistical significance level adapted is 0.05, so if the significant scores for regression co-efficients is less than 0.05 then the contribution of that variable is statistically significant, likewise if the significant score for the overall model is less than 0.05 then the model is statistically significant.
+
+**5. Residual Standard Error(RSE)**  
+The Residual Standard Error is the standard deviation for a normal distribution, centered on the predicted regression line, representing the distribution of actually observed values. The RSE is the standard deviation of that distribution and thus a measure on how much we expect the actually observed _Hours of dleep needed not to feel sleepy_ to deviate from the values predicted by the model. A value of RSE being '0' indicates that actual values = predicted values which is a case of overfitting of model.
+
+**6.Residuals and outliers**
+
+The **residuals** from a fitted model are the differences between the observed responses of response variable and the corresponding prediction of the response variable calculated using the regression function. The residuals basically check how well the observed data sit in relation to the predicted values. Regression co-efficients are calculated so that the resulting line has the lowest possible accumulation of residuals, minimising the overall distance between the observation and the predictions. Residuals is a good measure of how accurately the model predicts the response, and this parameter is the most important if the main purpose of a model is prediction.
+
+If a model is a perfect fit to the sample data - all data points would fall on the regression line and all residuals would be zero(which never happens in real life and should not). If a model is a poor fit to the sample data then the residuals will be large. If any particuler cases in the observation stand out as having a large residual, then they could be **outliers**.
+Examining the outliers of the data during model building is very important since outliers can cause the model to be biased because they affect the values of the regression co-efficients.
+
+
+**7.Influential points**
+
+As we check for outliers, we can also determine whether certain cases influence over the parameters of the model. If we remove these points which infuence the model, we should be able to see whether we get different regression co-efficients which helps to determine that if the model is stable across the sample and not biased by few influential cases in the data.  
+The statistic which tests whether such influencial cases make the model biased, is **Cook's distance**. It is a measure of overall influence of a case on the model , and Cook and Weisberg (1982) have suggested that values greater than **"1"** may be a cause of concern.
+ 
+
+**Ref:**  
+https://www.theanalysisfactor.com/assessing-the-fit-of-regression-models/  
+https://www.itl.nist.gov/div898/handbook/pmd/section4/pmd44.htm
+
+
+##3. THE DATASET
+
+Here, we are using a dataset which is a product of a survey regarding sleep. The amount of sleep an individual needs to live a healthy lifestyle usually depends on different factors. To examine this, a questionnaire regarding sleep was conducted to a demographic including both the genders Male(45%) and Female(55%), to analyse various factors which affect a respondent's sleep. Each participants were given a unique identification number in the dataset. The surevey was presented to a demographic of age ranging from 18 to 84. The dataset contains a total of 271 observations with 18 variables incorporated into it.The survey process included collecting data like repondant's health rate, work routine, drinking/smoking habits, routine of sleep, physical and mental stress of respondents.
+
+<font size='5'>3.1 Variables of Interest </font>
+
+As it is said earlier, the dataset contains 18 variables in total, from which below explained 4 variables are selected to perform the current study.
+
+a. **Hrs of sleep needed not to feel sleepy** (n=`r length(sleep$hourneed)`, M=`r round(mean(sleep$hourneed,na.rm=T),2)`, SD=`r round(sd(sleep$hourneed,na.rm=T),2)`) is a numeric variable which records the hours of sleep needed by the respondant not to feel sleepy the next day. The variable value ranges from minimum of 2 hours to maximum of 16 hours. This field is considered as the outcome variable in current analysis.
+
+b. **Hrs of sleep each weeknight** (n=`r length(sleep$hourwnit)`, M=`r round(mean(sleep$hourwnit,na.rm=T),2)`, SD=`r round(sd(sleep$hourwnit,na.rm=T),2)`) is a numeric variable which indicates the average sleeping hours of respondant during nights of every weekday. The variable value ranges from minimum of 3 hours to maximum of 10 hours. This field is considered as the predictor variable1 in current analysis.
+
+c. **Hrs of sleep each weekend night** (n=`r length(sleep$hourwend)`, M=`r round(mean(sleep$hourwend,na.rm=T),2)`, SD=`r round(sd(sleep$hourwend,na.rm=T),2)`) is a numeric variable which records the average sleeping hours of respondant during every weekend night. The variable value ranges from minimum of 3 hours to maximum of 14 hours. This field is considered as the predictor variable2 in current analysis.
+
+d. **refreshd** (n=`r length(sleep$refreshd)`) is a categorical variable which indicates whether the respondant usually wakes up feeling refreshed on weekdays. It contains 2 categories - "1": indicates that respondant wakes up feeling refreshed and "2": indicates that respondant do not wake up feeling refreshed on weekdays. The demographic contains 37% of people from category 1 and 63% of people from category 2.
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+panderOptions('table.split.table',Inf)
+my.data <- " 
+     Concept                            | Variable Name     | Statistical Type        | Possible Values
+  Hrs of sleep needed to not feel sleepy| hourneed          | Continuous              | Range from 2 to 16
+  Hours sleep/ week nights              | hourwnit          | Continuous              | Range from 3 to 10
+  Hours sleep/ week ends                | hourwend          | Continuous              | Range from 3 to 14
+  Wake up feeling refreshed weekdays    | refreshd          | Nominal                 | '1'- Yes '2'- No "
+df <- read.delim(textConnection(my.data),header = FALSE,sep='|',strip.white = T,stringsAsFactors = F)
+names(df) <- unname(as.list(df[1,]))
+df <- df[-1,]
+rownames(df) <- NULL
+pander(df,style='rmarkdown')
+```
+
+<font size='5'> 3.2 Descriptive statistics for each of the variables of interest </font>
+
+####1. HOURS OF SLEEP NEEDED NOT TO FEEL SLEEPY (HOURNEED)
+
+Hours of sleep needed not to feel sleepy is represented by a scale variable **hourneed** in the sleep dataset.
+
+* ####Descriptive statistics
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+pastecs::stat.desc(sleep$hourneed, basic=F)
+```
+
+* ####Histogram and QQ-plot
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+gg <- ggplot(sleep,aes(x=scale(sleep$hourneed))) + ggtitle("Figure 1.0: Histogram for Hours of sleep needed not to feel sleepy") + labs(x="Hours of sleep needed not to feel sleepy") +  geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg <- gg + stat_function(fun=dnorm,colour="Red",args=list(mean=mean(scale(sleep$hourneed),na.rm = T),sd=sd(scale(sleep$hourneed),na.rm = T)))
+gg
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+qqnorm(sleep$hourneed,main="Figure 1.1: QQ-Plot for Hours of sleep needed not to feel sleepy")
+qqline(sleep$hourneed,col=2)
+```
+
+* ####Standardised skew and kurtosis
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+Hrnskew <- semTools::skew(sleep$hourneed)
+Hrnskew
+Hrnkurt <- semTools::kurtosis(sleep$hourneed) 
+Hrnkurt
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+Hrnskew[1]/Hrnskew[2]
+Hrnkurt[1]/Hrnkurt[2]
+```
+
+* ####Outliers
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+outliers1 <- sleep %>% filter(scale(hourneed) >3.29 | scale(hourneed) < -3.29)
+
+numoutliers1<-outliers1 %>%
+  summarize(count=n())
+fullcount1<- sleep %>%
+  summarize(count=n())
+
+numoutliers1
+fullcount1
+
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+round((numoutliers1/fullcount1)*100, digits=2)
+```
+
+* ####Normality test-kolmogorov smirnov
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+ks.test(sleep$hourneed,"pnorm",mean(sleep$hourneed,na.rm = T),sd(sleep$hourneed,na.rm = T))
+```
+
+Inspection of the histogram and normality plot (see figure 1.0 and figure 1.1) shows that the distribution does not confirm exactly a normal distribution. Inspection of standardized normal scores for skewness and kurtosis indicated that while skewness was not an issue falling within the acceptable range of +/-2, (skewness of `r round(Hrnskew[1],2)` SE=`r round(Hrnskew[2],2)`), kurtosis was outside acceptable bounds, (kurtosis of `r round(Hrnkurt[1],2)` SE=`r round(Hrnkurt[2],3)`. Further inspection of the variable using standardized scores showed that only `r round((numoutliers1/fullcount1)*100, digits=2)`% were outside the acceptable range of +/3.29. A Kolmogorov-Smirnov test was also used to test for normality. The variable seems not to be normal as per the results D(266)=0.23, p-value nearly 0.(The majority results of ks test is proved to be not normal and here we are not solely relying on this test for normality detection)
+Hence, from above observations Hours of sleep needed not to feel sleepy will therefore be **treated as not normal within this analysis** (md =`r median(sleep$hourneed, na.rm=TRUE)`, n=`r nrow(sleep)-sum(is.na(sleep$hourneed))`).
+
+####2. AVERAGE HOURS OF SLEEP ON EACH WEEKNIGHT (HOURWNIT)
+
+Average hours of sleep on each weeknight is represented by a scale variable **hourwnit** in the sleep dataset.
+
+* ####Descriptive statistics
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+pastecs::stat.desc(sleep$hourwnit,basic=F)
+```
+
+* ####  Histogram and QQ-plot
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+gg2 <- ggplot(sleep,aes(x=scale(sleep$hourwnit))) + ggtitle("Figure 1.3: Histogram for average sleeping hours on each weeknight") +geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg2 <- gg2 + stat_function(fun=dnorm,colour="Red",args = list(mean=mean(scale(sleep$hourwnit),na.rm = T),sd=sd(scale(sleep$hourwnit),na.rm = T)))
+gg2
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+qqnorm(sleep$hourwnit, main = "Figure 1.4: QQ-plot for average sleeping hours on each weeknight")
+qqline(sleep$hourwnit,col=2)
+```
+
+* ####Standardised skew and kurtosis
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+hwnskew <- semTools::skew(sleep$hourwnit)
+hwnskew
+hwnkurt <- semTools::kurtosis(sleep$hourwnit)
+hwnkurt
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+hwnskew[1]/hwnskew[2]
+hwnkurt[1]/hwnkurt[2]
+```
+
+* ####Outliers
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+outliers3 <- sleep %>% filter(scale(hourwnit) >3.29 | scale(hourwnit) < -3.29)
+
+numoutliers3<-outliers3 %>%
+  summarize(count=n())
+fullcount3<- sleep %>%
+  summarize(count=n())
+
+numoutliers3
+fullcount3
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+round((numoutliers3/fullcount3)*100, digits=2)
+```
+
+* ####Normality test-kolmogorov smirnov
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+ks.test(sleep$hourwnit,"pnorm",mean(sleep$hourwnit,na.rm = T),sd(sleep$hourwnit,na.rm = T))
+```
+
+Inspection of the histogram and normality plot (see figure 1.3 and figure 1.4) shows that the distribution does not exactly confirm a normal distribution. Inspection of standardized normal scores for skewness and kurtosis indicated that while both fall within the acceptable range of +/-2, (skewness of `r round(hwnskew[1],2)` SE=`r round(hwnskew[2],2)`, kurtosis of `r round(hwnkurt[1],3)` SE=`r round(hwnkurt[2],3)`. Further inspection of the variable using standardized scores showed that only `r round((numoutliers3/fullcount3)*100, digits=2)`% were outside the acceptable range of +/3.29. A Kolmogorov-Smirnov test was also used to test for normality.The variable seems not to be normal as per the results D(270)=0.17, p-value nearly 0.(The majority results of ks test is proved to be not normal and here we are not solely relying on this test for normality detection)
+
+Hence, from above observations average hours of sleep on each weeknight will therefore be **treated as normal within this analysis** (m=`r round(mean(sleep$hourwnit, na.rm=TRUE),2)`, sd=`r round(sd(sleep$hourwnit, na.rm=TRUE),2)`, n=`r nrow(sleep)-sum(is.na(sleep$hourwnit))`).
+
+####3. AVERAGE HOURS OF SLEEP ON EACH WEEKEND (HOUREND)
+
+Average hours of sleep on each weekend is represented by a scale variable **hourwend** in the sleep dataset.
+
+* ####Descriptive statistics
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+pastecs::stat.desc(sleep$hourwend,basic=F)
+```
+
+* ####  Histogram and QQ-plot
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+gg2 <- ggplot(sleep,aes(x=scale(sleep$hourwend))) + ggtitle("Figure 1.5: Histogram for average sleeping hours on each weekend") +geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg2 <- gg2 + stat_function(fun=dnorm,colour="Red",args = list(mean=mean(scale(sleep$hourwend),na.rm = T),sd=sd(scale(sleep$hourwend),na.rm = T)))
+gg2
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+qqnorm(sleep$hourwend, main = "Figure 1.6: QQ-plot for average sleeping hours on each weekend")
+qqline(sleep$hourwend,col=2)
+```
+
+* ####Standardised skew and kurtosis
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+hweskew <- semTools::skew(sleep$hourwend)
+hweskew
+hwekurt <- semTools::kurtosis(sleep$hourwend)
+hwekurt
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+hweskew[1]/hweskew[2]
+hwekurt[1]/hwekurt[2]
+```
+
+* ####Outliers
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+outliers4 <- sleep %>% filter(scale(hourwend) >3.29 | scale(hourwend) < -3.29)
+
+numoutliers4<-outliers4 %>%
+  summarize(count=n())
+fullcount4<- sleep %>%
+  summarize(count=n())
+
+numoutliers4
+fullcount4
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+round((numoutliers4/fullcount4)*100, digits=2)
+```
+
+* ####Normality test-kolmogorov smirnov
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+ks.test(sleep$hourwend,"pnorm",mean(sleep$hourwend,na.rm = T),sd(sleep$hourwend,na.rm = T))
+```
+
+Inspection of the histogram and normality plot (see figure 1.5 and figure 1.6) shows that the distribution does not confirm exactly a normal distribution. Inspection of standardized normal scores for skewness and kurtosis indicated that while skewness was not an issue falling within the acceptable range of +/-2, (skewness of `r round(hweskew[1],2)` SE=`r round(hweskew[2],2)`), kurtosis was outside acceptable bounds, (kurtosis of `r round(hwekurt[1],2)` SE=`r round(hwekurt[2],2)`. Further inspection of the variable using standardized scores showed that only `r round((numoutliers4/fullcount4)*100, digits=2)`% were outside the acceptable range of +/3.29. A Kolmogorov-Smirnov test was also used to test for normality. The variable seems not to be normal as per the results D(269)=0.21, p-value nearly 0.(The majority results of ks test is proved to be not normal and here we are not solely relying on this test for normality detection).  
+Hence, from above observations average sleeping hours each weekend will therefore be **treated as not normal within this analysis** (md =`r round(median(sleep$hourwend, na.rm=TRUE),2)`, n=`r round(nrow(sleep)-sum(is.na(sleep$hourwend)),2)`).
+
+####4. WAKE UP FEELING REFRESHED ON WEEKDAYS (refreshd)
+
+Respondants waking up feeling refreshed on weekdays is represented by a categorical variable **refreshd** in the dataset with two categories **'1' - Yes and '2' - No**.
+
+* ####Table
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+table(sleep$refreshd)
+```
+
+* ####Descriptive statistics by group
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+describeBy(sleep$hourneed,group = sleep$refreshd)
+```
+
+##4. RESULTS
+
+Keeping in mind the examination and observations of variables of interest and their relationship in CA PART I and some variables analyis in this part, we are proceeding to build models using linear regression technique.
+
+###4.1 **BASELINE MODEL - model1**
+
+* ####**HYPOTHESIS** : There will be no significant prediction of _hours of sleep needed not to feel sleepy_ by _average sleeping hours on each weeknight_ and _average sleeping hours on each weekend night_.
+
+* ####**TABLE OF SUMMARY STATISTICS FOR VARIABLES OF INTEREST **
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+skewhrn <- round(Hrnskew[1],2)
+skewhwn <- round(hwnskew[1],2)
+skewhwe <- round(hweskew[1],2)
+kurthrn <- round(Hrnkurt[1],2)
+kurthwn <- round(hwnkurt[1],2)
+kurthwe <- round(hwekurt[1],2)
+
+summary1 <- data.frame(Skew = c(skewhrn,skewhwn,skewhwe), Kurtosis = c(kurthrn,kurthwn,kurthwe),row.names = c('Hrs of sleep needed not to feel sleepy','Hrs of slp on avg every weeknight','Hrs of sleep on avg every weekend night')) 
+library(knitr)
+kable(summary1)
+```
+
+The skew and kurtosis for variable _Hrs of slp on avg every weeknight_ falls within the accepted range of +/-2.
+The skew and kurtosis for variables _Hours of sleep needed not to feel sleepy_ and _Hrs of slp on avg every weekend night_ does not fall within the range of +/- 2, hence an additional check was done to see if 95% of data fall within range of +/-3.29(standarsised score). Also it was found that only 0.74% of data acted as outliers falling outside the range of +/-3.29 for both the variables. Since we have got a very less percentage of outliers we are considering to ignore the same in this analysis.
+
+* ####**STATISTICAL EVIDENCE FOR CURRENT ANALYSIS**
+
+Before doing regression modelling we need to establish support going ahead with building a predictive model. So we need to investigate if there is any evidence of a relationship between the outcome and predictor variable using correlation or difference test and make decisions based on the results.
+
+For this hypothesis we are testing whether the outcome variable _Hrs of slp needed not to feel sleepy_ is related to predictor variable1 _Hrs of slp on avg every weeknight_ and predictor variable2 _Hrs of slp on avg every weekend night_ seperately. The results are as observed below:
+
+<font size = '4'>1. Hypothesis for testing relation between _Hrs of slp needed not to feel sleepy_ and _Hrs of slp on avg every weeknight_. </font>
+
+Ho: There is no correlation between hours of sleep needed not to feel sleepy and average hours of sleep on each week night.
+
+H1: There is correlation between hours of sleep needed not to feel sleepy and average hrs of sleep on each week night.
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+#scatter plot
+scatter <- ggplot(sleep,aes(x=sleep$hourneed,y=sleep$hourwnit)) + geom_point() + ggtitle("Figure 1.7: Relation between hourwnit and hourneed")
+scatter <- scatter + geom_smooth(method = 'lm',se=F,colour = 'red')
+scatter
+```
+
+A scatterplot summarizes the correlation in Figure 3, there is a moderate positive correlation where increase in hrs of slp needed not to feel sleepy, increases the average hrs of slp on each weeknight and vice versa.
+
+since the scatterplot does not show homoscedasticity, correlation test with kendall method has been used.
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+##correlation test
+cor.test(sleep$hourwnit,sleep$hourneed,method = "kendall") ## significant positive correlation of 0.37 p<0.05
+```
+
+####Co-efficient of determination
+r2 = `r (0.38*0.38)` where r=tau=0.38
+
+The effect size is given by rho=0.38 which is medium and indicates that r2= `r round((0.38*0.38)*100,2)`% of variance is shared between the variables, hours of sleep needed for respondents not to feel sleepy and hours of sleep on average on each weeknight.
+
+####Reporting correlation
+**A Kendall's rank correlation tau is computed to assess the relationship between Hours of sleep needed for respondant not to feel sleepy and average hours of sleep on each weeknight.The observed medium positive correlation between the two variables is statistically significant[tau = 0.38, n = 271, p < 0.05]. Hence we have evidence reject null hypothesis and accept the alternate hypothesis that there is statistically significant correlation between the two variables**
+
+<font size = '4'>2. Hypothesis for testing relation between _Hrs of slp needed not to feel sleepy_ and _Hrs of slp on avg every weekend night_. </font>
+
+Ho: There is no correlation between hours of sleep needed not to feel sleepy and average hours of sleep on each weekend night.
+
+H1: There is correlation between hours of sleep needed not to feel sleepy and average hrs of sleep on each weekend night.
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+#scatter
+scatter <- ggplot(sleep,aes(x=sleep$hourneed,y=sleep$hourwend)) + geom_point() +ggtitle("Figure:1.8: Relation between hourwend and hourneed")
+scatter <- scatter + geom_smooth(method = 'lm',se=F,colour = 'red')
+scatter
+```
+
+A scatterplot summarizes the correlation in Figure 3, there is a moderate positive correlation where increase in hrs of slp needed not to feel sleepy, increases the average hrs of slp on each weekend night and vice versa.
+
+since the scatterplot does not show homoscedasticity, correlation test with kendall method has been used.
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+##correlation test
+cor.test(sleep$hourwend,sleep$hourneed,method = "kendall") ## significant positive correlation of 0.43 p<0.05
+```
+
+####Co-efficient of determination
+r2 = `r (0.43*0.43) ` where r=tau= 0.43
+
+The effect size is given by rho=0.43 which is medium and indicates that r2= `r round((0.43*0.43)*100,2)`% of variance is shared between the variables, hours of sleep needed for respondents not to feel sleepy and hours of sleep on average on each weekend night.
+
+####Reporting correlation
+**A Kendall's rank correlation tau is computed to assess the relationship between Hours of sleep needed for respondant not to feel sleepy and average hours of sleep on each weekend night.The observed medium positive correlation between the two variables is statistically significant[tau = 0.43, n = 271, p < 0.05]. Hence we have evidence to reject null hypothesis and accept the alternate hypothesis that there is statistically significant correlation between the two variables**
+
+<font size = '4'>3. Collinearity check between the independent variables in use </font>
+
+One of the concerns for conducting multiple linear regression is the concept of collinearity. It occurs when the independent variables contain strongly redundant information between them and potentially contains same information which results in model producing invalid results. Hence we need to check the collinearity between them by creating a correlation matrix which contains comparision of independent variables with each other. A collinearity above 0.8  suggests that collinearity might be present.
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+df <- data.frame(hourwnit=sleep$hourwnit,hourwend=sleep$hourwend)
+cor(df,method = 'kendall')
+```
+
+As per the above results, the collinearity seen between the two independent varibales is **0.46 < 0.8** indicates that there is no much collinearity present between them and we can proceed to build the model.
+
+* #### **MULTIPLE LINEAR REGRESSION MODEL - model1**
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+model1 <- lm(sleep$hourneed~sleep$hourwend+sleep$hourwnit)
+summary(model1)
+anova(model1)
+```
+
+```{r warning=FALSE,message=FALSE}
+library(stargazer)
+stargazer(model1,type="text")
+```
+
+* #### **INTERPRETATION OF model1**
+
+**1. F-statistic**  
+The F-statistic= 46.96 with p-value of the overall model < 0.05 indicates that the model is a significant predictor of outcome varibale
+
+**2. R-squared and Adjusted R-squared**  
+R-squared or the adjusted R-squared indicates the proportion that 25.4 % of the variation in outcome variable can be explained by the regression model with 2 predictor variables having significant predicting capability.
+
+**3. β values or regression co-efficients**  
+We can see that the regression co-efficient for variable _Hrs of slp on average on each weekend night_ is β1=0.31,p-value<0.05 and for variable _Hrs of slp on average on each weekend night_ is β2=0.23,p-value<0.05, which indicates that both the predictor variables are significant predictors of the outcome variable _Hours of sleep needed not to feel sleepy_.
+
+From this observation, our model can be mathematically represented as:
+
+**Hours of sleep needed not to feel sleepy = 3.69 + 0.31\*Hrs of slp on average on each weekend night+0.23\*Hrs of slp on average on each week night**  
+where Intercept(constant) = 3.69
+
+**4. t-value**  
+A larger t-value indicates that it is less likely that the regression co-efficient is not equal to zero purely by chance. So, higher the t-value, the better.
+
+Pr(>|t|) or p-value is the probability that you get a t-value as higher than the observed value when the Null Hypothesis (the β coefficient is equal to zero or that there is no relationship) is true. So if the Pr(>|t|) is low, the coefficients are significant. If the Pr(>|t|) is high, the coefficients are not significant.
+
+Here, for _Hrs of slp on average on each weekend night_: t=5.40,Pr(>|t|) < 0.05 and for _Hrs of slp on average on each week night_: t=3.21,Pr(>|t|) < 0.05 which indicates that both variables are significant predictors of outcome variable and the regression co-efficients being non-zero is not purely by chance.
+
+**5. Residual Standard Error(RSE)**  
+The residual standard error in this model is given by RSE = 1.01, which means that the model deviates by 1.01 standard deviations from the actual values to predicted values in that distribution.
+
+**6. Checking the collinearity of predictor variables in the model1**
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(car)
+VIFmodel1 <- vif(model1)
+VIFmodel1
+
+Tolerance = 1/VIFmodel1
+Tolerance
+```
+
+ **VIF and Tolerance**  
+Tests to see if the data met the assumption of collinearity indicated that multicollinearity was not a concern.
+( _Hrs of slp on average on each weekend night_ : VIF=1.55,Tolerance=0.64, _Hrs of slp on average on each week night_ : VIF=1.55,Tolerance=0.64)
+Both variable's VIF < 2.5 and Tolerance >0.4 which says there is no collinearity between them.
+
+**7. Checking Influential points and outliers**
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+##Checking Influential points and outliers 
+plot(cooks.distance(model1))
+```
+
+ **Influential points and Outliers**  
+An analysis of standard residuals was carried out on the data to identify any outliers which showed that the data contained no outliers.It is seen that there are no values greater than '1' and hence no influential points found.
+
+* #### **RESIDUAL PLOTS**
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+##Plot of model
+plot(model1, which =1)
+```
+
+The graph which is plotted between the residuals and fitted values produces a line which is very near to the value '0'. It is interpreted that if the line of residuals v/s fitted is nearer to '0' then the model exhibits a good fit.
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+##Residual plots
+
+df <- data.frame(resid(model1))
+colnames(df) <- 'resid'
+gg <- ggplot(df,aes(x=scale(resid))) + ggtitle("Figure 1.9: Histogram for residuals_model1") + labs(x="Residuals") +  geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg <- gg + stat_function(fun=dnorm,colour="Red",args=list(mean=mean(scale(df$resid),na.rm = T),sd=sd(scale(df$resid),na.rm = T)))
+gg
+
+plot(model1, which =2)
+
+```
+
+One of the assumptions of regression analysis is that the residuals are normally distributed. Here, we are assessing this assumption by plotting histogram and qq-plot of the residuals. By observing the above graphs we can say that the residuals are normally distributed in this model. 
+
+###**REPORTING MULTILINEAR REGRESSION MODEL-model1**
+
+<font size ='4'>A multiple linear regression was calculated to predict _Hours of sleep needed not to feel sleepy_ based on _Hrs of slp on average on each weekend night_ and _Hrs of slp on average on each week night_. A significant regression equation was found (F(2,268)=46.96,p<0.05), with an R-square of 0.25. Respondant's predicted _Hours of sleep needed not to feel sleepy_ is equal to 3.61 + 0.31. _Hrs of slp on average on each weekend night_ + 0.23. _Hrs of slp on average on each week night_ where both the predictor variables are measured in number of hours and 3.61=Constant. Respondant's _Hours of sleep needed not to feel sleepy_ increased 0.31 hours for each hours of _Hrs of slp on average on each weekend night_ and 0.23 hours for each hours of _Hrs of slp on average on each week night_.
+
+Examination of the histogram, normal q-q plot of standardised residuals, the scatterplot of the dependent variable _Hours of sleep needed not to feel sleepy_, and standardised residuals showed that the some outliers existed. However, examination of the standardised residuals showed that none could be considered to have undue influence (95% within limits of -1.96 to plus 1.96 and none with Cook's distance >1 as outlined in Field (2013)
+
+Examination for multicollinearity showed that the tolerance and variance influence factor measures were within acceptable levels (tolerance >0.4, VIF <2.5 ) as outlined in Tarling (2008). The scatterplot of standardised residuals showed that the data met the assumptions of homogeneity of variance and linearity. The data also meets the assumption of non-zero variances of the predictors </font>
+
+### 4.2 **SECOND MODEL - model2**
+
+In this model we are trying to improve the prediction capabability of **model1** by adding one more predictor variable. The predictor variable which we have chosen in this model is a categorical variable.
+
+* #### **HYPOTHESIS** : There will be no significant prediction of _hours of sleep needed not to feel sleepy_ by _average sleeping hours on each weeknight_ , _average sleeping hours on each weekend night_ and _Wake up feeling refreshed weekdays_
+
+* #### **STATISTICAL EVIDENCE FOR CURRENT ANALYSIS**
+
+Here we are investigating if there is any evidence of a relationship between the outcome variable _hours of sleep needed not to feel sleepy_ and additional predictor variable for this model _Wake up feeling refreshed weekdays_ using difference test and make decisions based on the results.
+
+<font size = '4'>1. Hypothesis for testing relation between _Hrs of slp needed not to feel sleepy_ and _Hrs of slp on avg every weeknight_. </font>
+
+Ho: There is no difference in hours of sleep needed not to feel sleepy between people who wake up feeling refreshed on weekdays and who do not.
+
+H1: There is difference in hours of sleep needed not to feel sleepy between people who wake up feeling refreshed on weekdays and who do not.
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+####Box plot
+boxplot(sleep$hourneed~sleep$refreshd, xlab ="Wake up feeling refreshed on weekdays", ylab = "Hours of sleep needed", main ="Figure 1.10: Box plot of variables hourneed and refreshd")
+```
+
+####Mann-Whitney U test
+Since the variable hourneed we have considered is continuos dependent and not normal and the variable gender has 2 categories, Mann-Whitney U test has been chosen over other difference tests
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+coin::wilcox_test(hourneed~as.factor(refreshd), data=sleep) 
+``` 
+
+####Cohen's effect size
+
+The Cohen's effect size is calculated using formula r = Z/sqrt(df):
+Therefore, r is `r round(4.85/sqrt(271),2)` which indicates small effect.
+
+####Reporting difference
+**A Mann-Whitney test is conducted and it was found that hours of sleep needed for people who wake up feeling refreshed and hours of sleep needed for people who donot wake up feeling refreshed has statistically significant difference between them [U=-4.86,p-value= 1.18e-06 < 0.05,r= 0.29]. Hence we have enough evidence to reject null hypothesis and accept alternate hypothesis that there is significant difference between the categories.**
+
+* #### **MULTIPLE LINEAR REGRESSION MODEL - model2**
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+#recode the categorical variable
+sleep$refreshd=recode(sleep$refreshd,'1=0;2=1')
+#0=reference category = feeling refreshed        1=category of interest = not feeling refreshed
+```
+
+The variable _Wake up feeling refreshed weekdays_ is recoded as above.
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+model2 <- lm(sleep$hourneed~sleep$hourwend+sleep$hourwnit+as.factor(sleep$refreshd))
+summary(model2)
+anova(model2)
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(stargazer)
+stargazer(model1,model2,type="text")
+```
+
+* #### **INTERPRETATION OF model2**
+
+**1. F-statistic**  
+The F-statistic= 45.42 with p-value of the overall model < 0.05 indicates that the model is a significant predictor of outcome varibale
+
+**2. R-squared and Adjusted R-squared**  
+R-squared or the adjusted R-squared indicates the proportion that 33.04 % of the variation in outcome variable can be explained by the regression model with 2 predictor variables having significant predicting capability.
+
+**3. β values or regression co-efficients**  
+We can see that the regression co-efficient for variable _Hrs of slp on average on each weekend night_ is β1=0.24,p-value<0.05, for variable _Hrs of slp on average on each weekend night_ is β2=0.33,p-value<0.05 and for variable _Wake up feeling refreshed weekdays_ is β3=0.33,p-value<0.05 which indicates that all three predictor variables are significant predictors of the outcome variable _Hours of sleep needed not to feel sleepy_.
+
+From this observation, our model can be mathematically represented as:
+
+**Hours of sleep needed not to feel sleepy = 3.04 + 0.24\*Hrs of slp on average on each weekend night + 0.33\*Hrs of slp on average on each week night + 0.71\*Wake up feeling refreshed weekdays **  
+where Intercept(constant) = 3.04
+
+**4. t-value**  
+A larger t-value indicates that it is less likely that the regression co-efficient is not equal to zero purely by chance. So, higher the t-value, the better.
+
+Pr(>|t|) or p-value is the probability that you get a t-value as higher than the observed value when the Null Hypothesis (the β coefficient is equal to zero or that there is no relationship) is true. So if the Pr(>|t|) is low, the coefficients are significant. If the Pr(>|t|) is high, the coefficients are not significant.
+
+Here, for _Hrs of slp on average on each weekend night_: t=4.32,Pr(>|t|) < 0.05, for _Hrs of slp on average on each week night_: t=4.77,Pr(>|t|) < 0.05, for _Wake up feeling refreshed weekdays_: t=5.621,Pr(>|t|) < 0.05 which indicates that all three are significant predictors of outcome variable and the regression co-efficients being non-zero is not purely by chance.
+
+**5. Residual Standard Error(RSE)**  
+The residual standard error in this model is given by RSE = 0.96, which means that the model deviates by 0.96 standard deviations from the actual values to predicted values in that distribution.
+
+**6. Checking the collinearity of predictor variables in the model2**
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(car)
+VIFmodel2 <- vif(model2)
+VIFmodel2
+
+Tolerance = 1/VIFmodel2
+Tolerance
+```
+
+**VIF and Tolerance**  
+Tests to see if the data met the assumption of collinearity indicated that multicollinearity was not a concern.
+( _Hrs of slp on average on each weekend night_ : VIF=1.64,Tolerance=0.61, _Hrs of slp on average on each week night_ : VIF=1.67,Tolerance=0.59, _Wake up feeling refreshed weekdays: VIF=1.08,Tolerance=0.92)
+All 3 variable's VIF < 2.5 and Tolerance >0.4 which says there is no collinearity between them.
+
+**7. Checking Influential points and outliers**
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+##Checking Influential points and outliers
+plot(cooks.distance(model2))
+```
+**Influential points and Outliers**  
+An analysis of standard residuals was carried out on the data to identify any outliers which showed that the data contained no outliers.It is seen that there are no values greater than '1' and hence no influential points found.
+
+* #### **RESIDUAL PLOTS**
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+##Plot of model
+plot(model2, which =1)
+```
+
+The graph which is plotted between the residuals and fitted values produces a line which is very near to the value '0'. It is interpreted that if the line of residuals v/s fitted is nearer to '0' then the model exhibits a good fit.
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+##Residual plots
+
+df1 <- data.frame(resid(model2))
+colnames(df1) <- 'resid'
+gg <- ggplot(df1,aes(x=scale(resid))) + ggtitle("Figure 1.11: Histogram for residuals_model2") + labs(x="Residuals") +  geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg <- gg + stat_function(fun=dnorm,colour="Red",args=list(mean=mean(scale(df1$resid),na.rm = T),sd=sd(scale(df1$resid),na.rm = T)))
+gg
+
+plot(model2, which =2)
+
+```
+
+One of the assumptions of regression analysis is that the residuals are normally distributed. Here, we are assessing this assumption by plotting histogram and qq-plot of the residuals. By observing the above graphs we can say that the residuals are normally distributed in this model. 
+
+###**REPORTING MULTILINEAR REGRESSION MODEL-model2**
+
+<font size='4'>A multiple linear regression was calculated to predict _Hours of sleep needed not to feel sleepy based_ on _Hrs of slp on average on each weekend night_, _Hrs of slp on average on each week night_ and _Wake up feeling refreshed on weekdays_. A significant regression equation was found (F(3,267)=45.42,p<0.05), with an R-square of 0.33. Respondant's predicted _Hours of sleep needed not to feel sleepy_ is equal to 3.04 + 0.24. _Hrs of slp on average on each weekend night_ + 0.33. _Hrs of slp on average on each week night_ + 0.70. _Wake up feeling refreshed weekdays_ where _Hrs of slp on average on each weekend night_ , _Hrs of slp on average on each week night_ are measured in number of hours and _Wake up feeling refreshed weekdays_ is recoded as 0=Yes,1=No and 3.04=Constant. Respondant's _Hours of sleep needed not to feel sleepy_ increased 0.31 hours for each hours of _Hrs of slp on average on each weekend night_ and 0.23 hours for each hours of _Hrs of slp on average on each week night_ and people who donot wake up feeling refreshed needed 0.70 hours of sleep more than people who wake up feeling refreshed.
+
+Examination of the histogram, normal q-q plot of standardised residuals, the scatterplot of the dependent variable _Hours of sleep needed not to feel sleepy_, and standardised residuals showed that the some outliers existed. However, examination of the standardised residuals showed that none could be considered to have undue influence (95% within limits of -1.96 to plus 1.96 and none with Cook's distance >1 as outlined in Field (2013)
+
+Examination for multicollinearity showed that the tolerance and variance influence factor measures were within acceptable levels (tolerance >0.4, VIF <2.5 ) as outlined in Tarling (2008). The scatterplot of standardised residuals showed that the data met the assumptions of homogeneity of variance and linearity. The data also meets the assumption of non-zero variances of the predictors.</font>
+
+##5.CONCLUSION AND DISCUSSION
+
+<font size = '4'>The aim of this study is to build a multiple linear regression model capable of predicting _Hours of sleep needed not to feel sleepy_. The initial variable exploration indicated results consistent with previous studies. Some new variable explorations were carried out which were found relevant to this analysis. The relationship test between _Hours of sleep needed not to feel sleepy_ and _Hrs of slp on average on each weekend night_ was significant indicating relationship between these for the tested demographic. Also, The relationship test between _Hours of sleep needed not to feel sleepy_ and _Hrs of slp on average on each week night_ was also significant indicating relationship between these for the tested demographic. The test of difference between Hours of sleep needed for people who wake up feeling refreshed and for people who donot usually, showed there was a significant difference between them.  
+
+Once the significant variables were identified a number of models were built to predict _Hours of sleep needed not to feel sleepy_.  
+Model 1 was constructed using only _Hrs of slp on average on each weekend night_ and _Hrs of slp on average on each week night_ as predictor variables where the model was capable of explaining **4.23%** of the variance in _Hours of sleep needed not to feel sleepy_.  
+**_Hours of sleep needed not to feel sleepy_ = 3.61 + 0.31* _Hrs of slp on average on each weekend night_ + 0.23* _Hrs of slp on average on each week night_ **  
+
+Model 2 was constructed using _Hrs of slp on average on each weekend night_, _Hrs of slp on average on each week night_ and _Wake up feeling refreshed weekdays_ as predictor variables where the model was capable of explaining **4.34%** of the variance in _Hours of sleep needed not to feel sleepy_.  
+**_Hours of sleep needed not to feel sleepy_ = 3.04 + 0.24* _Hrs of slp on average on each weekend night_ + 0.33* _Hrs of slp on average on each week night_ + 0.70* _Wake up feeling refreshed weekdays_**  
+
+The 2 hypothesis tests set out at the start of the study stated that the models would not be predictive with regard to _Hours of sleep needed not to feel sleepy_ and that the null hypothesis would be true. The results show that the null
+hypothesis is false so that the 2 models built are both significant & predictive and the second model is the best fit between the two.  
+
+However,as the models which are built in this studies can explain only about 4.34% of the variablity of outcome variable, the model is not accurate to be used as a best model to actually predict the _Hours of sleep needed not to feel sleepy_. But some of the insights discovered in the creation of model is of high value for building the model further. For example: The respondants who usually wake up feeling refreshed on weekdays need more amount of sleep than people who usually wake up feeling refreshed on weekdays. </font>
+
+
