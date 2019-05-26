@@ -1,0 +1,598 @@
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#1. INTRODUCTION
+
+A questionnaire regarding sleep was conducted to a demographic including both the genders Male(45%) and Female(55%), to analyse various factors which affect a respondent's sleep. The process included collecting data like repondant's health rate, work routine, drinking/smoking habits, routine of sleep, physical and mental stress of respondents.
+
+##1.1 Research question
+
+The amount of sleep an individual needs to live a healthy lifestyle usually depends on different factors. In this research, an analysis was carried out to find whether the sleeping time of respondant is influenced by the person's weight,gender,age group,caffeine intake and their routine of sleep using the sleep dataset.
+
+##1.2 Hypothesis
+
+###Hypothesis 1 : Whether hours of sleep needed not to feel sleepy depends on type of gender.
+
+H0: There is no difference between hours of sleep needed for respondents of different gender.  
+
+H1: There is difference between hours of sleep needed for respondents of different gender.
+
+
+###Hypothesis 2 : Whether hours of sleep needed not to feel sleepy depends on age groups.
+
+H0: There is no difference between average hours of sleep needed for respondent's of different age groups.
+
+H1: There is difference between average hours of sleep needed for respondent's of different age groups.
+
+
+###Hypothesis 3 : Whether hours of sleep needed not to feel sleepy depends on weight of an individual.
+
+Ho: There is no correlation between weight of the respondant and hrs of sleep needed for them not to feel sleepy.
+
+H1: There is correlation between weight of the respondant and hrs of sleep needed for them not to feel sleepy.
+
+
+###Hypothesis 4 : Whether caffeine influences an individual's sleeping time during week nights
+
+H0: There is no correlation between caffeine drinks per day and average hours of sleep on each week night.
+
+H1: There is correlation between caffeine drinks per day and average hours of sleep on each week night.
+
+
+###Hypothesis 5 : Whether an individual's sleeping time in week nights affect sleeping time in week ends.
+
+Ho: There is no correlation between average hours of sleep week night and average hrs of sleep week end.
+
+H1: There is correlation between avg hrs of sleep week night and avg hrs of sleep week end.
+
+
+##1.3 Initial Setup
+
+```{r warning=FALSE,message=FALSE}
+library(foreign)
+library(stats)
+library(dplyr)
+library(ggplot2)
+library(psych)
+library(pastecs)
+library(semTools)
+library(car)
+library(pander)
+
+#Read in the dataset
+sleep <- read.spss("sleep5ED.sav", to.data.frame = T,na="")
+colnames(sleep) <-  tolower(colnames(sleep))
+```
+
+#2. Methodology
+
+##2.1 Variables of interest
+
+The variables of interest used in this research are shown below:
+
+```{r}
+panderOptions('table.split.table',Inf)
+my.data <- " 
+     Concept                            | Variable Name     | Statistical Type        | Possible Values
+  Hrs of sleep needed to not feel sleepy| hourneed          | Continuous              | Range from 2 to 16
+  Gender                                | sex               | Nominal                 | 1= male; 0=female  
+  Highest education level achieved      | edlevel           | Ordinal                 | 1=primary 2=secondary 3=trade 4=undergrad 5=postgrad 
+  caffeine drinks per day               | caffeine          | Continuous              | Range from 0 to 10
+  Weight in Kg                          | Weight            | Continuos               | Range from 43 to 160
+  Hours sleep/ week nights              | hourwnit          | Continuous              | Range from 3 to 10
+  Hours sleep/ week ends                | hourwend          | Continuous              | Range from 3 to 14"
+df <- read.delim(textConnection(my.data),header = FALSE,sep='|',strip.white = T,stringsAsFactors = F)
+names(df) <- unname(as.list(df[1,]))
+df <- df[-1,]
+rownames(df) <- NULL
+pander(df,style='rmarkdown')
+```
+
+##2.2 Normality
+
+The steps used to check for normality of a variable are mentioned below:
+
+1. Inspecting the histogram and QQ-plot.
+2. Inspecting standardised normal scores of skew and kurtosis based on the advice of George and Mallery(2011) which categorizes a distribution as normal if the relevant standardised scores for skewness and kurtosis fall in the range +/- 2.
+3. Inspecting Z-score and outliers based on the advice of Field, Miles and Field (2012) which categorizes a distribution as normal if 95% of the standardised scores for the variable fall within the bounds of +/-3.29 for a dataset larger than 80 cases.
+4. Conducting a normality test like kolmogorov smirnov which assumes null hypothesis as, the distribution of variable is normal.
+
+##2.3 Inspecting continuous variables of interest
+
+Each of the variables of interest were inspected. The scale variables of interest, those representing hours of sleep needed not to feel sleepy, hours slept in average each week night, hours slept in average each week end and weight in Kgs were inspected.
+
+###1. HOURS OF SLEEP NEEDED (HOURNEED)
+
+Hours of sleep needed not to feel sleepy is represented by a scale variable hourneed in the sleep dataset.
+
+####Descriptive statistics
+```{r}
+pastecs::stat.desc(sleep$hourneed, basic=F)
+```
+
+####  Histogram and QQ-plot
+```{r warning=FALSE}
+gg <- ggplot(sleep,aes(x=scale(sleep$hourneed))) + ggtitle("Figure 1.1: Histogram for Hours of sleep needed not to feel sleepy") + labs(x="Hours of sleep needed not to feel sleepy") +  geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg <- gg + stat_function(fun=dnorm,colour="Red",args=list(mean=mean(scale(sleep$hourneed),na.rm = T),sd=sd(scale(sleep$hourneed),na.rm = T)))
+gg
+```
+
+```{r}
+qqnorm(sleep$hourneed,main="Figure 1.2: QQ-Plot for Hours of sleep needed not to feel sleepy")
+qqline(sleep$hourneed,col=2)
+```
+
+####  Standardised skew and kurtosis
+```{r warning=FALSE}
+Hrnskew <- semTools::skew(sleep$hourneed)
+Hrnskew
+Hrnkurt <- semTools::kurtosis(sleep$hourneed) 
+Hrnkurt
+```
+
+```{r}
+Hrnskew[1]/Hrnskew[2]
+Hrnkurt[1]/Hrnkurt[2]
+```
+
+####  Outliers
+```{r}
+outliers1 <- sleep %>% filter(scale(hourneed) >3.29 | scale(hourneed) < -3.29)
+
+numoutliers1<-outliers1 %>%
+  summarize(count=n())
+fullcount1<- sleep %>%
+  summarize(count=n())
+
+numoutliers1
+fullcount1
+```
+
+```{r}
+round((numoutliers1/fullcount1)*100, digits=2)
+```
+
+####  Normality test-kolmogorov smirnov
+```{r warning=FALSE}
+ks.test(sleep$hourneed,"pnorm",mean(sleep$hourneed,na.rm = T),sd(sleep$hourneed,na.rm = T))
+```
+
+Inspection of the histogram and normality plot (see figure 1.1 and figure 1.2) shows that the distribution does not confirm exactly a normal distribution. Inspection of standardized normal scores for skewness and kurtosis indicated that while skewness was not an issue falling within the acceptable range of +/-2, (skewness of `r Hrnskew[1]` SE=`r Hrnskew[2]`), kurtosis was outside acceptable bounds, (kurtosis of `r Hrnkurt[1]` SE=`r Hrnkurt[2]`. Further inspection of the variable using standardized scores showed that only `r round((numoutliers1/fullcount1)*100, digits=2)`% were outside the acceptable range of +/3.29. A Kolmogorov-Smirnov test was also used to test for normality. The variable seems not to be normal as per the results D(266)=0.23, p-value nearly 0 indicating that the data was not normally distributed.(The majority results of ks test is proved to be not normal and here we are not solely relying on this test for normality detection)
+Hence, from above observations Hours of sleep needed not to feel sleepy will therefore be treated as not normal within this analysis (md =`r median(sleep$hourneed, na.rm=TRUE)`, n=`r nrow(sleep)-sum(is.na(sleep$hourneed))`).
+
+###2. CAFFEINE DRINKS PER DAY (CAFFEINE)
+
+Number of caffeine intake per day is represented by a scale variable caffeine in the sleep dataset. 
+
+####Descriptive statistics
+```{r}
+pastecs::stat.desc(sleep$caffeine,basic = F)
+```
+
+####  Histogram and QQ-plot
+```{r warning=FALSE}
+gg1 <- ggplot(sleep,aes(x=scale(sleep$caffeine))) + ggtitle("Figure 1.3: Histogram for Caffeine drinks per day") +geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg1 <- gg1 + stat_function(fun=dnorm,colour="Red",args = list(mean=mean(scale(sleep$caffeine),na.rm = T),sd=sd(scale(sleep$caffeine),na.rm = T)))
+gg1
+```
+
+```{r}
+qqnorm(sleep$caffeine, main = "Figure 1.4: QQ-plot for Caffeine drinks per day")
+qqline(sleep$caffeine,col=2)
+```
+
+####  Standardised skew and kurtosis
+```{r warning=FALSE}
+cafskew <- semTools::skew(sleep$caffeine)
+cafskew
+cafkurt <- semTools::kurtosis(sleep$caffeine)
+cafkurt
+```
+
+```{r}
+cafskew[1]/cafskew[2]
+cafkurt[1]/cafkurt[2]
+```
+
+####  Outliers
+```{r}
+outliers2 <- sleep %>% filter(scale(caffeine) >3.29 | scale(caffeine) < -3.29)
+
+numoutliers2<-outliers2 %>%
+  summarize(count=n())
+fullcount2<- sleep %>%
+  summarize(count=n())
+
+numoutliers2
+fullcount2
+```
+
+```{r}
+round((numoutliers2/fullcount2)*100, digits=2)
+```
+
+####  Normality test-kolmogorov smirnov
+```{r warning=FALSE}
+ks.test(sleep$caffeine,"pnorm",mean(sleep$caffeine,na.rm = T),sd(sleep$caffeine,na.rm = T))
+```
+
+Inspection of the histogram and normality plot (see figure 1.3 and figure 1.4) shows that the distribution does not confirm a normal distribution. Inspection of standardized normal scores for skewness and kurtosis indicated that while both fall with an acceptable range of +/-2, (skewness of `r cafskew[1]` SE=`r cafskew[2]`, kurtosis of `r cafkurt[1]` SE=`r cafkurt[2]`. Further inspection of the variable using standardized scores showed that only `r round((numoutliers2/fullcount2)*100, digits=2)`% were outside the acceptable range of +/3.29. A Kolmogorov-Smirnov test was also used to test for normality.The variable seems not to be normal as per the results D(262)=0.15, p-value nearly 0 indicating that the data was not normally distributed.(The majority results of ks test is proved to be not normal and here we are not solely relying on this test for normality detection)
+
+Hence, from above observations number of caffeine drinks per day will therefore be treated as normal within this analysis (m=`r mean(sleep$caffeine, na.rm=TRUE)`, sd=`r sd(sleep$caffeine, na.rm=TRUE)`, n=`r nrow(sleep)-sum(is.na(sleep$caffeine))`).
+
+###3. AVERAGE HOURS OF SLEEP ON EACH WEEKNIGHT (HOURWNIT)
+
+Average hours of sleep on each weeknight is represented by a scale variable hourwnit in the sleep dataset.
+
+####Descriptive statistics
+```{r}
+pastecs::stat.desc(sleep$hourwnit,basic=F)
+```
+
+####  Histogram and QQ-plot
+```{r warning=FALSE}
+gg2 <- ggplot(sleep,aes(x=scale(sleep$hourwnit))) + ggtitle("Figure 1.5: Histogram for average sleeping hours on each weeknight") +geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg2 <- gg2 + stat_function(fun=dnorm,colour="Red",args = list(mean=mean(scale(sleep$hourwnit),na.rm = T),sd=sd(scale(sleep$hourwnit),na.rm = T)))
+gg2
+```
+
+```{r}
+qqnorm(sleep$hourwnit, main = "Figure 1.6: QQ-plot for average sleeping hours on each weeknight")
+qqline(sleep$hourwnit,col=2)
+```
+
+####  Standardised skew and kurtosis
+```{r warning=FALSE}
+hwnskew <- semTools::skew(sleep$hourwnit)
+hwnskew
+hwnkurt <- semTools::kurtosis(sleep$hourwnit)
+hwnkurt
+```
+
+```{r}
+hwnskew[1]/hwnskew[2]
+hwnkurt[1]/hwnkurt[2]
+```
+
+####  Outliers
+```{r}
+outliers3 <- sleep %>% filter(scale(hourwnit) >3.29 | scale(hourwnit) < -3.29)
+
+numoutliers3<-outliers3 %>%
+  summarize(count=n())
+fullcount3<- sleep %>%
+  summarize(count=n())
+
+numoutliers3
+fullcount3
+```
+
+```{r}
+round((numoutliers3/fullcount3)*100, digits=2)
+```
+
+####  Normality test-kolmogorov smirnov
+```{r warning=FALSE}
+ks.test(sleep$hourwnit,"pnorm",mean(sleep$hourwnit,na.rm = T),sd(sleep$hourwnit,na.rm = T))
+```
+
+Inspection of the histogram and normality plot (see figure 1.5 and figure 1.6) shows that the distribution does not exactly confirm a normal distribution. Inspection of standardized normal scores for skewness and kurtosis indicated that while both fall within the acceptable range of +/-2, (skewness of `r hwnskew[1]` SE=`r hwnskew[2]`, kurtosis of `r hwnkurt[1]` SE=`r hwnkurt[2]`. Further inspection of the variable using standardized scores showed that only `r round((numoutliers3/fullcount3)*100, digits=2)`% were outside the acceptable range of +/3.29. A Kolmogorov-Smirnov test was also used to test for normality.The variable seems not to be normal as per the results D(270)=0.17, p-value nearly 0 indicating that the data was not normally distributed.(The majority results of ks test is proved to be not normal and here we are not solely relying on this test for normality detection)
+
+Hence, from above observations average hours of sleep on each weeknight will therefore be treated as normal within this analysis (m=`r mean(sleep$hourwnit, na.rm=TRUE)`, sd=`r sd(sleep$hourwnit, na.rm=TRUE)`, n=`r nrow(sleep)-sum(is.na(sleep$hourwnit))`).
+
+###4. AVERAGE HOURS OF SLEEP ON EACH WEEKEND (HOUREND)
+
+Average hours of sleep on each weekend is represented by a scale variable hourwend in the sleep dataset.
+
+####Descriptive statistics
+```{r}
+pastecs::stat.desc(sleep$hourwend,basic=F)
+```
+
+####  Histogram and QQ-plot
+```{r warning=FALSE}
+gg2 <- ggplot(sleep,aes(x=scale(sleep$hourwend))) + ggtitle("Figure 1.7: Histogram for average sleeping hours on each weekend") +geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg2 <- gg2 + stat_function(fun=dnorm,colour="Red",args = list(mean=mean(scale(sleep$hourwend),na.rm = T),sd=sd(scale(sleep$hourwend),na.rm = T)))
+gg2
+```
+
+```{r}
+qqnorm(sleep$hourwend, main = "Figure 1.8: QQ-plot for average sleeping hours on each weekend")
+qqline(sleep$hourwend,col=2)
+```
+
+####  Standardised skew and kurtosis
+```{r warning=FALSE}
+hweskew <- semTools::skew(sleep$hourwend)
+hweskew
+hwekurt <- semTools::kurtosis(sleep$hourwend)
+hwekurt
+```
+
+```{r}
+hweskew[1]/hweskew[2]
+hwekurt[1]/hwekurt[2]
+```
+
+####  Outliers
+```{r}
+outliers4 <- sleep %>% filter(scale(hourwend) >3.29 | scale(hourwend) < -3.29)
+
+numoutliers4<-outliers4 %>%
+  summarize(count=n())
+fullcount4<- sleep %>%
+  summarize(count=n())
+
+numoutliers4
+fullcount4
+```
+
+```{r}
+round((numoutliers4/fullcount4)*100, digits=2)
+```
+
+####  Normality test-kolmogorov smirnov
+```{r warning=FALSE}
+ks.test(sleep$hourwend,"pnorm",mean(sleep$hourwend,na.rm = T),sd(sleep$hourwend,na.rm = T))
+```
+
+Inspection of the histogram and normality plot (see figure 1.7 and figure 1.8) shows that the distribution does not confirm exactly a normal distribution. Inspection of standardized normal scores for skewness and kurtosis indicated that while skewness was not an issue falling within the acceptable range of +/-2, (skewness of `r hweskew[1]` SE=`r hweskew[2]`), kurtosis was outside acceptable bounds, (kurtosis of `r hwekurt[1]` SE=`r hwekurt[2]`. Further inspection of the variable using standardized scores showed that only `r round((numoutliers4/fullcount4)*100, digits=2)`% were outside the acceptable range of +/3.29. A Kolmogorov-Smirnov test was also used to test for normality. The variable seems not to be normal as per the results D(269)=0.21, p-value nearly 0 indicating that the data was not normally distributed.(The majority results of ks test is proved to be not normal and here we are not solely relying on this test for normality detection)
+
+Hence, from above observations average sleeping hours each weekend will therefore be treated as not normal within this analysis (md =`r median(sleep$hourwend, na.rm=TRUE)`, n=`r nrow(sleep)-sum(is.na(sleep$hourwend))`).
+
+###4. WEIGHT IN KGS (WEIGHT)
+
+Weight of the respondant in Kgs is represented by a scale variable weight in the sleep dataset.
+
+####Descriptive statistics
+```{r}
+pastecs::stat.desc(sleep$weight,basic=F)
+```
+
+####  Histogram and QQ-plot
+```{r warning=FALSE}
+gg2 <- ggplot(sleep,aes(x=scale(sleep$weight))) + ggtitle("Figure 1.9: Histogram for weight in kgs") +geom_histogram(binwidth = 0.4,colour="Black",aes(y=..density..,fill=..count..))
+gg2 <- gg2 + stat_function(fun=dnorm,colour="Red",args = list(mean=mean(scale(sleep$weight),na.rm = T),sd=sd(scale(sleep$weight),na.rm = T)))
+gg2
+```
+
+```{r}
+qqnorm(sleep$weight, main = "Figure 1.10: QQ-plot for for weight in kgs")
+qqline(sleep$weight,col=2)
+```
+
+####  Standardised skew and kurtosis
+```{r warning=FALSE}
+wtskew <- semTools::skew(sleep$weight)
+wtskew
+wtkurt <- semTools::kurtosis(sleep$weight)
+wtkurt
+```
+
+```{r}
+wtskew[1]/wtskew[2]
+wtkurt[1]/wtkurt[2]
+```
+
+####  Outliers
+```{r}
+outliers5 <- sleep %>% filter(scale(weight) >3.29 | scale(weight) < -3.29)
+
+numoutliers5<-outliers5 %>%
+  summarize(count=n())
+fullcount5<- sleep %>%
+  summarize(count=n())
+
+numoutliers5
+fullcount5
+```
+
+```{r}
+round((numoutliers5/fullcount5)*100, digits=2)
+```
+
+####  Normality test-kolmogorov smirnov
+```{r warning=FALSE}
+ks.test(sleep$hourwend,"pnorm",mean(sleep$hourwend,na.rm = T),sd(sleep$hourwend,na.rm = T))
+```
+Inspection of the histogram and normality plot (see figure 1.9 and figure 1.10) shows that the distribution does not confirm exactly a normal distribution. Inspection of standardized normal scores for skewness and kurtosis indicated that while skewness was not an issue falling within the acceptable range of +/-2, (skewness of `r wtskew[1]` SE=`r wtskew[2]`), kurtosis was outside acceptable bounds, (kurtosis of `r wtkurt[1]` SE=`r wtkurt[2]`. Further inspection of the variable using standardized scores showed that only `r round((numoutliers5/fullcount5)*100, digits=2)`% were outside the acceptable range of +/3.29. A Kolmogorov-Smirnov test was also used to test for normality. The variable seems not to be normal as per the results D(269)=0.21, p-value nearly 0 indicating that the data was not normally distributed.(The majority results of ks test is proved to be not normal and here we are not solely relying on this test for normality detection)
+Hence, from above observations weight in kgs will therefore be treated as not normal within this analysis (md =`r median(sleep$hourwend, na.rm=TRUE)`,n=`r nrow(sleep)-sum(is.na(sleep$hourwend))`).
+
+##2.3 Inspecting categorical variables of interest
+
+###1. GENDER (SEX)
+
+Gender is represented by a categorical variable in the dataset. The dataset contains data from 150 female respondents and 121 male respondents.
+
+####Table
+```{r}
+table(sleep$sex)
+```
+
+####Descriptive statistics by group
+```{r}
+describeBy(sleep$hourneed,group = sleep$sex)
+```
+
+####Box plot
+```{r}
+boxplot(sleep$hourneed~sleep$sex, xlab ="Gender", ylab = "Hours of sleep needed", main ="Figure 1.3: Box plot for Hours of sleep needed not to feel sleepy and Gender")
+```
+
+###2. AGE RECODED INTO 3 GROUPS (AGEGP3)
+
+Age group is recoded into a categorical variable of 3 groups in the dataset. Group 1 with respondents of age <=37 years(33.46 %),Group 2 with respondents of age 38-50 years(34.46 %) and Group 3 with respondents of age 51+ years(31.85 %).
+
+####Table
+```{r}
+table(sleep$agegp3)
+```
+
+####Descriptive statistics by group
+```{r}
+describeBy(sleep$hourneed,group = sleep$agegp3)
+```
+
+####Box plot
+```{r}
+boxplot(sleep$hourneed~sleep$agegp3, xlab ="Age recoded into 3 groups", ylab = "Hours of sleep needed", main ="Figure 2.1: Box plot for Hours of sleep needed not to feel sleepy and Age")
+```
+
+#3. Result
+
+An alpha level 0.05 was adopted and Cohen's conventions on effect size were adopted for all statistical tests.
+
+##3.1 Hypothesis 1
+
+H0: There is no difference between hours of sleep needed for respondents of different gender.
+
+H1: There is difference between hours of sleep needed for respondents of different gender.
+
+###Mann-Whitney U test
+Since the variable hourneed we have considered is continuos dependent and not normal and the variable gender has 2 categories, Mann-Whitney U test has been chosen over other difference tests
+```{r}
+coin::wilcox_test(hourneed~sex, data=sleep) 
+``` 
+
+###Cohen's effect size
+
+The Cohen's effect size is calculated using formula r = Z/sqrt(df):
+Therefore, r is `r 1.23/sqrt(270)` which is small.
+
+###Reporting difference
+**A Mann-Whitney test is conducted and it was found that hours of sleep needed for female(M = `r mean(sleep$hourneed[sleep$sex=="female"],na.rm=T)` SD=`r mean(sleep$hourneed[sleep$sex=="female"],na.rm=T)`) and hours of sleep needed for male(M= `r mean(sleep$hourneed[sleep$sex=="male"],na.rm=T)` SD=`r mean(sleep$hourneed[sleep$sex=="male"],na.rm=T)`) has no statistically significant difference between them [U= 1.23,p-value= 0.218,r= -0.07].**
+
+##3.2 Hypothesis 2
+
+H0: There is no difference between hours of sleep needed for respondents of different age grp.
+
+H1: There is difference between hours of sleep needed for respondents of different age grp.
+
+### Kruskal Wallis Test
+Since the variable hourneed we have considered is continuos dependent and not normal and the variable agegp3 has 3 groups, Kruskal Wallis test has been chosen over other difference tests.
+```{r}
+kruskal.test(hourneed~agegp3,data=sleep)
+```
+
+### Post-hoc test - Pairwise.wilcoxon test
+Since it is found that there is significant difference between the age groups, a post-hoc test has been conducted to inspect between each of the groups for difference. Here, Bonferroni correction method has been used with the Pairwise.wilcoxon test.
+```{r}
+pairwise.wilcox.test(sleep$hourneed,sleep$agegp3,adjust.method = "bonf")
+```
+
+###Eta-squared effect size
+
+The Eta-squared effect size is calculated as chi-squared value/(N-1) 
+Therefore eta-squared effect size is `r 12.241/270` which is small.
+
+###Reporting difference
+**A Kruskal Wallis test is conducted to examine the impact of age groups on hours of sleep needed not to feel sleepy and it is found that there is a statistically significant difference between the 3 age groups [H(2)=12.24,p-value=0.002,r=0.74]. A post-hoc comparisions using pairwise wilcoxon test indicated that the mean score of hours of sleep needed for age group <=37 years (M=`r mean(sleep$hourneed[sleep$agegp3=="<= 37"],na.rm=T)` SD=`r sd(sleep$hourneed[sleep$agegp3=="<= 37"],na.rm=T)`) is statistically different to that of age group 38-50 years (M=`r mean(sleep$hourneed[sleep$agegp3=="38 - 50"],na.rm=T)` SD=`r sd(sleep$hourneed[sleep$agegp3=="38 - 50"],na.rm=T)`). Mean score of hours of sleep needed for Age group 51+ years (M=`r mean(sleep$hourneed[sleep$agegp3=="51+"],na.rm=T)` SD=`r sd(sleep$hourneed[sleep$agegp3=="51+"],na.rm=T)`) do not differ significantly from either <=37 age group or 38-50 age group.**
+
+##3.3 Hypothesis 3
+
+Ho: There is no correlation between weight of the respondant and hrs of sleep needed for them not to feel sleepy.
+
+H1: There is correlation between weight of the respondant and hrs of sleep needed for them not to feel sleepy
+
+### Scatterplot
+```{r warning=FALSE}
+scatter <- ggplot(sleep,aes(x=sleep$weight,y=sleep$hourneed)) + geom_point() + ggtitle("Figure 3: Scatterplot of weight in kgs and hours of sleep needed not to feel sleepy") + 
+labs(x="sleep$weight",y="sleep$hourneed")
+scatter <- scatter + geom_smooth(method='lm',se=F,colour="Red")
+scatter
+```
+A scatterplot summarizes the correlation in Figure 3, there is a weak negative correlation where increase in weight in kgs decreases the Hours of sleep needed not to feel sleepy and vice versa.
+
+### Kendall's rank correlation tau
+```{r}
+cor.test(sleep$weight,sleep$hourneed,method = "kendall") 
+```
+
+### Co-efficient of determination
+r2 = `r 0.099*0.099` where r=tau= -0.099
+
+The effect size is given by rho=0.552 which is large and indicates that r2= `r (0.099*0.099)*100`% of variance is shared between the variables, weight in kgs and hours of sleep needed for respondents not to feel sleepy.
+
+### Reporting correlation
+**A Kendall's rank correlation tau is computed to assess the relationship between weight in kgs and Hours of sleep needed for respondant not to feel sleepy.The observed negative correlation between the two variables is statistically significant[tau = -0.099, n = 271, p = 0.03].**
+
+##3.4 Hypothesis 4
+
+Ho: There is no correlation between average hours of sleep week night and average hrs of sleep week end.
+
+H1: There is correlation between avg hrs of sleep week night and avg hrs of sleep week end.
+
+### Scatterplot
+```{r warning=FALSE}
+scatter <- ggplot(sleep,aes(x=sleep$hourwnit,y=sleep$hourwend)) + geom_point() + ggtitle("Figure 2: Scatterplot of average sleeping hours on each weeknight and average sleeping hours on each weekend") + labs(x="sleep$weight",y="sleep$hourneed")
+scatter <- scatter + geom_smooth(method='lm',se=F,colour="Red")
+scatter
+```
+
+A scatterplot summarizes the correlation here in Figure 2 as monotonic relation, there is a moderate positive correlation where the increase in average hours of sleep each weeknight increases the average sleeping hour each weekend and vice versa.
+
+### Spearman product-moment correlation
+```{r warning=FALSE}
+cor.test(sleep$hourwnit,sleep$hourwend,method = "spearman") 
+```
+
+### Co-efficient of determination
+r2 = `r 0.552*0.552` where r=rho=0.552
+
+The effect size is given by rho=0.552 which is large and indicates that r2= `r (0.552*0.552)*100`% of variance is shared between the variables,average hours of sleep each weeknight and average sleeping hour each weekend.
+
+### Reporting correlation
+**A Spearman's rank correlation rho is computed to assess the relationship between average hours of sleep each weeknight and average sleeping hour each weekend.The observed positive correlation between the two variables is statistically significant[rho = 0.55, n = 271, p-value < 2.2e-16].**
+
+##3.5 Hypothesis 5
+
+H0: There is no correlation between caffeine drinks per day and average hours of sleep on each week night.
+
+H1: There is correlation between caffeine drinks per day and average hours of sleep on each week night.
+
+### Scatterplot
+```{r warning=FALSE}
+scatter <- ggplot(sleep,aes(x=sleep$caffeine,y=sleep$hourwnit)) + geom_point() + ggtitle("Figure 1: Scatterplot of caffeine intake per day and average sleeping hours on each weeknight")+labs(x="sleep$caffeine",y="sleep$hourwnit")
+scatter <- scatter + geom_smooth(method='lm',se=F,colour="Red")
+scatter
+```
+
+A scatterplot summarizes the correlation here in Figure 1 as linear relation, there is a weak negative correlation where the increase in number of caffeine intake per day decreases the average sleeping hour in weeknight and vice versa.
+
+### Pearson product-moment correlation
+```{r}
+cor.test(sleep$hourwnit,sleep$caffeine, method = 'pearson')
+```
+
+### Co-efficient of determination
+r2 = `r (0.086*0.086)*100` where r=-0.086
+
+The effect size is given by r=0.08 which is very small and indicates that r2= `r (0.086*0.086)*100`% of variance is shared between the variables, number of caffeines per day and average hours of sleep each weeknight.
+
+### Reporting correlation:
+**A Pearson product-moment correlation coefficient is computed to assess the relationship between the number of caffeine intake per day and average sleeping hour in weeknight.The observed negative correlation between the two variables is not statistically significant[r = -0.086, n = 271, p = 0.16].**
+
+
+#4. CONCLUSION
+
+**From the above analysis, it is found that hours of sleep needed for respondents does not differ with respect to gender and the effect size is also very small(0.07) which supports the same.**
+**For this analysis there is evidence to proceed to investage if the age groups has an impact on sleeping hours.It is found that there is difference between sleeping hours needed for people of age <=37 years and that for people of age 51+. Further computation recorded that respondant's weight also has a relationship indicating weak negative correlation with hours of sleep needed.**
+
+**In addition, it has been analysed that sleeping hours in weeknight is not influenced by caffeine intake instead it is strongly correlated with sleeping hours in weekend which can be considered to explain 30.47% of their co variance indicating a strong association between the two variables.**
+
+#5. REFERENCES
+
+1.https://stats.stackexchange.com/questions/157451/how-do-i-calculate-the-effect-size-for-a-spearmans-correlation-is-it-the-same
+
+2.http://rcompanion.org/handbook/F_08.html
+
+3.https://www.slideshare.net/plummer48/reporting-mann-whitney-u-test-in-apa
+
+4.https://www.statisticssolutions.com/correlation-pearson-kendall-spearman/
+
+5.https://en.wikipedia.org/wiki/Effect_size
+
+
